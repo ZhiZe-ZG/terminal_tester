@@ -21,7 +21,7 @@ fn main() -> Result<()> {
     // setup terminal
     enable_raw_mode()?;
     let mut stdout = stdout();
-    execute!(stdout, EnterAlternateScreen, EnableMouseCapture,Hide)?;
+    execute!(stdout, EnterAlternateScreen, EnableMouseCapture, Hide)?;
     execute!(stdout, terminal::Clear(terminal::ClearType::All))?;
 
     // time
@@ -149,6 +149,8 @@ fn main() -> Result<()> {
     let mut sh_time = SystemTime::now();
     let mut move_x = 80;
     let mut move_y = 31;
+    let mut move_left = false;
+    let mut move_right = false;
     loop {
         if poll(Duration::from_millis(100))? {
             if let Event::Key(key) = event::read()? {
@@ -156,10 +158,12 @@ fn main() -> Result<()> {
                     break;
                 } else if let KeyCode::Char('a') = key.code {
                     flag = if flag { false } else { true };
-                }else if let KeyCode::Char('h') = key.code {
-                    move_x = if move_x-1>=0 {move_x-1} else{0};
-                }else if let KeyCode::Char('l') = key.code {
-                    move_x = if move_x+1<160 {move_x+1} else{159};
+                } else if let KeyCode::Char('h') = key.code {
+                    move_left = true;
+                    move_right = false;
+                } else if let KeyCode::Char('l') = key.code {
+                    move_right = true;
+                    move_left = false;
                 }
             }
             // thread::sleep_ms(2000);
@@ -185,7 +189,7 @@ fn main() -> Result<()> {
                         b: 0
                     })
                 ),
-                cursor::MoveTo(x, y+1),
+                cursor::MoveTo(x, y + 1),
                 Print(
                     format!(
                         "now {}",
@@ -200,7 +204,7 @@ fn main() -> Result<()> {
                         b: 0
                     })
                 ),
-                cursor::MoveTo(x, y+2),
+                cursor::MoveTo(x, y + 2),
                 Print(
                     format!(
                         "rate {}",
@@ -235,6 +239,20 @@ fn main() -> Result<()> {
                     Color::White
                 }))
             )?;
+            if move_left || move_right{
+                // clean last 我
+                queue!(stdout, cursor::MoveTo(move_x, move_y), Print(" "))?;
+                if move_x < 159 {
+                    queue!(stdout, cursor::MoveTo(move_x + 1, move_y), Print(" "))?;
+                }
+            }
+            if move_left {
+                move_x = if move_x-1>=0 {move_x-1} else{0};
+                move_left = false;
+            } else if move_right {
+                move_x = if move_x+1<160 {move_x+1} else{159};
+                move_right = false;
+            }
             queue!(
                 stdout,
                 cursor::MoveTo(move_x, move_y),
@@ -244,34 +262,16 @@ fn main() -> Result<()> {
                     Color::DarkCyan
                 }))
             )?;
-            if move_x >0{
-                queue!(
-                    stdout,
-                    cursor::MoveTo(move_x-1, move_y),
-                    Print(" ")
-                )?;
-            }
-            if move_x >1{
-                queue!(
-                    stdout,
-                    cursor::MoveTo(move_x-2, move_y),
-                    Print(" ")
-                )?;
-            }
-            if move_x <159{
-                queue!(
-                    stdout,
-                    cursor::MoveTo(move_x+1, move_y),
-                    Print(" ")
-                )?;
-            }
-            if move_x <158{
-                queue!(
-                    stdout,
-                    cursor::MoveTo(move_x+2, move_y),
-                    Print(" ")
-                )?;
-            }
+            // if move_x > 0 {
+            //     queue!(stdout, cursor::MoveTo(move_x - 1, move_y), Print(" "))?;
+            // }
+            // if move_x > 1 {
+            //     queue!(stdout, cursor::MoveTo(move_x - 2, move_y), Print(" "))?;
+            // }
+            
+            // if move_x < 158 {
+            //     queue!(stdout, cursor::MoveTo(move_x + 2, move_y), Print(" "))?;
+            // }
             stdout.flush()?;
         }
     }
