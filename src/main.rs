@@ -260,7 +260,7 @@ fn main() -> Result<()> {
                     Color::Cyan
                 } else {
                     Color::DarkCyan
-                }))
+                }).bold())
             )?;
             // if move_x > 0 {
             //     queue!(stdout, cursor::MoveTo(move_x - 1, move_y), Print(" "))?;
