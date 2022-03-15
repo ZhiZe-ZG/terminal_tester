@@ -1,5 +1,5 @@
 use crossterm::{
-    cursor,
+    cursor::{self, Hide},
     event::{self, poll, DisableMouseCapture, EnableMouseCapture, Event, KeyCode},
     execute, queue,
     style::{
@@ -21,7 +21,7 @@ fn main() -> Result<()> {
     // setup terminal
     enable_raw_mode()?;
     let mut stdout = stdout();
-    execute!(stdout, EnterAlternateScreen, EnableMouseCapture)?;
+    execute!(stdout, EnterAlternateScreen, EnableMouseCapture,Hide)?;
     execute!(stdout, terminal::Clear(terminal::ClearType::All))?;
 
     // time
@@ -143,17 +143,26 @@ fn main() -> Result<()> {
 
     // wait loop
     let mut flag = false;
+    let sh_x = 80;
+    let sh_y = 30;
+    let mut sh_flag = false;
+    let mut sh_time = SystemTime::now();
+    let mut move_x = 80;
+    let mut move_y = 31;
     loop {
-        if poll(Duration::from_millis(0))? {
+        if poll(Duration::from_millis(100))? {
             if let Event::Key(key) = event::read()? {
                 if let KeyCode::Char('q') = key.code {
                     break;
                 } else if let KeyCode::Char('a') = key.code {
-                    flag = true;
+                    flag = if flag { false } else { true };
+                }else if let KeyCode::Char('h') = key.code {
+                    move_x = if move_x-1>=0 {move_x-1} else{0};
+                }else if let KeyCode::Char('l') = key.code {
+                    move_x = if move_x+1<160 {move_x+1} else{159};
                 }
             }
             // thread::sleep_ms(2000);
-            
         }
 
         if flag {
@@ -164,15 +173,41 @@ fn main() -> Result<()> {
                 cursor::MoveTo(x, y),
                 Print(
                     format!(
-                        "Time:{},now {}",
+                        "Time:{}",
                         SystemTime::now()
                             .duration_since(start_time)
                             .unwrap()
                             .as_secs_f64(),
+                    )
+                    .with(Color::Rgb {
+                        r: 255,
+                        g: 153,
+                        b: 0
+                    })
+                ),
+                cursor::MoveTo(x, y+1),
+                Print(
+                    format!(
+                        "now {}",
                         SystemTime::now()
                             .duration_since(start_time2)
                             .unwrap()
-                            .as_secs_f64()
+                            .as_secs_f64(),
+                    )
+                    .with(Color::Rgb {
+                        r: 255,
+                        g: 153,
+                        b: 0
+                    })
+                ),
+                cursor::MoveTo(x, y+2),
+                Print(
+                    format!(
+                        "rate {}",
+                        1.0 / (SystemTime::now()
+                            .duration_since(start_time)
+                            .unwrap()
+                            .as_secs_f64())
                     )
                     .with(Color::Rgb {
                         r: 255,
@@ -181,6 +216,62 @@ fn main() -> Result<()> {
                     })
                 )
             )?;
+            stdout.flush()?;
+            if SystemTime::now()
+                .duration_since(sh_time)
+                .unwrap()
+                .as_secs_f32()
+                > 0.5
+            {
+                sh_time = SystemTime::now();
+                sh_flag = if sh_flag { false } else { true };
+            }
+            queue!(
+                stdout,
+                cursor::MoveTo(sh_x, sh_y),
+                Print("我朝天空歌唱，不知声去何方".with(if sh_flag {
+                    Color::DarkGrey
+                } else {
+                    Color::White
+                }))
+            )?;
+            queue!(
+                stdout,
+                cursor::MoveTo(move_x, move_y),
+                Print("我".with(if sh_flag {
+                    Color::Cyan
+                } else {
+                    Color::DarkCyan
+                }))
+            )?;
+            if move_x >0{
+                queue!(
+                    stdout,
+                    cursor::MoveTo(move_x-1, move_y),
+                    Print(" ")
+                )?;
+            }
+            if move_x >1{
+                queue!(
+                    stdout,
+                    cursor::MoveTo(move_x-2, move_y),
+                    Print(" ")
+                )?;
+            }
+            if move_x <159{
+                queue!(
+                    stdout,
+                    cursor::MoveTo(move_x+1, move_y),
+                    Print(" ")
+                )?;
+            }
+            if move_x <158{
+                queue!(
+                    stdout,
+                    cursor::MoveTo(move_x+2, move_y),
+                    Print(" ")
+                )?;
+            }
             stdout.flush()?;
         }
     }
